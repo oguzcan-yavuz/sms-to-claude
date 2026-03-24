@@ -2,16 +2,19 @@
 
 A [Claude Code Channel](https://code.claude.com/docs/en/channels-reference) that lets you control a Claude Code session via SMS. Send natural language commands, get replies, and approve/deny tool use — all over text message.
 
-```
-Your phone (SMS)
-      │
-      ▼
-  Twilio number
-      │  ← polled every 5s
-      ▼
-SMS Channel Server ────── stdio ──────► Claude Code (your project)
-      │
-      └── sms_reply tool ──► Twilio ──► Your phone
+```mermaid
+flowchart LR
+    phone(["📱 Your phone"])
+    twilio["Twilio"]
+    server["SMS Channel Server\n(MCP, Bun)"]
+    claude["Claude Code\n(your project)"]
+
+    phone -->|"SMS command"| twilio
+    twilio -->|"poll every 5s"| server
+    server <-->|"stdio"| claude
+    claude -->|"sms_reply tool"| server
+    server -->|"SMS reply"| twilio
+    twilio -->|"SMS"| phone
 ```
 
 ## How it works
