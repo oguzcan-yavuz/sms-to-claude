@@ -10,6 +10,7 @@ import { Poller } from './poller.js'
 import { PermissionManager } from './permissions.js'
 
 const MAX_SMS_CHARS = 1600
+const TRUNCATED_SUFFIX = ' [truncated]'
 
 const config = loadConfig()
 const twilioClient = twilio(config.twilio.accountSid, config.twilio.authToken)
@@ -32,9 +33,16 @@ const mcp = new Server(
   },
 )
 
+// Helper to send notifications with custom methods not in the SDK type union
+function sendNotification(method: string, params: Record<string, unknown>): Promise<void> {
+  return (mcp as any).notification({ method, params })
+}
+
 // --- sendSms helper used by both the reply tool and PermissionManager ---
 async function sendSms(text: string): Promise<void> {
-  const body = text.length > MAX_SMS_CHARS ? text.slice(0, MAX_SMS_CHARS - 12) + ' [truncated]' : text
+  const body = text.length > MAX_SMS_CHARS
+    ? text.slice(0, MAX_SMS_CHARS - TRUNCATED_SUFFIX.length) + TRUNCATED_SUFFIX
+    : text
   await twilioClient.messages.create({
     body,
     from: config.twilio.phoneNumber,
@@ -46,10 +54,7 @@ async function sendSms(text: string): Promise<void> {
 const permMgr = new PermissionManager({
   sendSms,
   sendVerdict: async (requestId, behavior) => {
-    await (mcp as any).notification({
-      method: 'notifications/claude/channel/permission',
-      params: { request_id: requestId, behavior },
-    })
+    await sendNotification('notifications/claude/channel/permission', { request_id: requestId, behavior })
   },
 })
 
@@ -107,12 +112,9 @@ const poller = new Poller({
   twilioPhoneNumber: config.twilio.phoneNumber,
   allowedPhoneNumbers: config.allowedPhoneNumbers,
   onMessage: async msg => {
-    await (mcp as any).notification({
-      method: 'notifications/claude/channel',
-      params: {
-        content: msg.body,
-        meta: { from: msg.from, message_sid: msg.sid },
-      },
+    await sendNotification('notifications/claude/channel', {
+      content: msg.body,
+      meta: { from: msg.from, message_sid: msg.sid },
     })
   },
   onVerdict: async (behavior, requestId) => {
