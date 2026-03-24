@@ -2,7 +2,10 @@
   "mcpServers": {
     "sms": {
       "command": "bun",
-      "args": ["/absolute/path/to/sms-to-claude/src/index.ts"]
+      "args": [
+        "--env-file", "/absolute/path/to/sms-to-claude/.env",
+        "/absolute/path/to/sms-to-claude/src/index.ts"
+      ]
     }
   }
 }

@@ -65,18 +65,23 @@ POLL_INTERVAL_MS=5000               # optional, defaults to 5s
 
 **3. Register with Claude Code**
 
-Copy `.mcp.json.example` to your project directory as `.mcp.json` and update the path:
+Copy `.mcp.json.example` to your project directory as `.mcp.json` and replace both `/absolute/path/to/sms-to-claude` placeholders with the real path to this repo:
 
 ```json
 {
   "mcpServers": {
     "sms": {
       "command": "bun",
-      "args": ["/absolute/path/to/sms-to-claude/src/index.ts"]
+      "args": [
+        "--env-file", "/Users/you/dev/sms-to-claude/.env",
+        "/Users/you/dev/sms-to-claude/src/index.ts"
+      ]
     }
   }
 }
 ```
+
+The `--env-file` flag tells Bun exactly where to find the credentials, regardless of which project directory Claude Code is running from.
 
 **4. Start Claude Code**
 
