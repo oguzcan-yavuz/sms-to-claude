@@ -51,13 +51,12 @@ export class PermissionManager {
 
   async sweepExpired(): Promise<void> {
     const now = Date.now()
-    for (const [id, entry] of this.pending) {
-      if (entry.expires <= now) {
-        this.pending.delete(id)
-        await this.ctx.sendSms(
-          `Permission request ${id} expired. Answer in terminal if present.`
-        )
-      }
+    const expired = [...this.pending.entries()].filter(([, entry]) => entry.expires <= now)
+    for (const [id] of expired) {
+      this.pending.delete(id)
+      await this.ctx.sendSms(
+        `Permission request ${id} expired. Answer in terminal if present.`
+      )
     }
   }
 

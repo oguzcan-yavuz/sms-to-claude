@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test'
+import { describe, test, expect, mock } from 'bun:test'
 import { PermissionManager, type PermissionsContext } from '../src/permissions'
 
 function makeCtx(): { sendSms: ReturnType<typeof mock>; sendVerdict: ReturnType<typeof mock>; ctx: PermissionsContext } {
