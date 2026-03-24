@@ -1,6 +1,6 @@
 # sms-to-claude
 
-A [Claude Code Channel](https://code.claude.com/docs/en/channels-reference) that lets you control a Claude Code session from a regular (non-smart) phone via SMS. Send natural language commands, get replies, and approve/deny tool use — all over text message.
+A [Claude Code Channel](https://code.claude.com/docs/en/channels-reference) that lets you control a Claude Code session via SMS. Send natural language commands, get replies, and approve/deny tool use — all over text message.
 
 ```
 Your phone (SMS)
