@@ -1,0 +1,14 @@
+{
+  "name": "sms-to-claude",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2",
+    "twilio": "^5.4.0",
+    "zod": "^3.24.2"
+  }
+}
