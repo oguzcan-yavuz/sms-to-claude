@@ -64,4 +64,9 @@ describe('loadConfig', () => {
     delete process.env.ALLOWED_PHONE_NUMBERS
     expect(() => loadConfig()).toThrow('Missing required env var: ALLOWED_PHONE_NUMBERS')
   })
+
+  test('throws on non-numeric POLL_INTERVAL_MS', () => {
+    process.env.POLL_INTERVAL_MS = 'abc'
+    expect(() => loadConfig()).toThrow('POLL_INTERVAL_MS must be a number')
+  })
 })

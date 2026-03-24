@@ -24,6 +24,11 @@ export function loadConfig(): Config {
     allowedPhoneNumbers: new Set(
       required('ALLOWED_PHONE_NUMBERS').split(',').map(n => n.trim())
     ),
-    pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS ?? '5000', 10),
+    pollIntervalMs: (() => {
+      const raw = process.env.POLL_INTERVAL_MS ?? '5000'
+      const val = parseInt(raw, 10)
+      if (isNaN(val)) throw new Error(`POLL_INTERVAL_MS must be a number, got: "${raw}"`)
+      return val
+    })(),
   }
 }
