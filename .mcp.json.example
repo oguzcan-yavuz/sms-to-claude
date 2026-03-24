@@ -2,7 +2,7 @@
   "mcpServers": {
     "sms": {
       "command": "bun",
-      "args": ["/Users/oguzcanyavuz/dev/sms-to-claude/src/index.ts"]
+      "args": ["/absolute/path/to/sms-to-claude/src/index.ts"]
     }
   }
 }

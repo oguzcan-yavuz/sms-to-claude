@@ -123,6 +123,11 @@ const poller = new Poller({
 })
 
 // --- Connect and start loops ---
-await mcp.connect(new StdioServerTransport())
-poller.start(config.pollIntervalMs)
-permMgr.startSweep()
+try {
+  await mcp.connect(new StdioServerTransport())
+  poller.start(config.pollIntervalMs)
+  permMgr.startSweep()
+} catch (err) {
+  console.error('[sms-channel] startup failed:', err)
+  process.exit(1)
+}
