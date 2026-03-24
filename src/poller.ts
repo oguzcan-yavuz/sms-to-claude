@@ -44,9 +44,6 @@ export class Poller {
       if (!this.ctx.allowedPhoneNumbers.has(msg.from)) continue
 
       this.processedSids.add(msg.sid)
-      if (msg.dateSent > this.lastChecked) {
-        this.lastChecked = msg.dateSent
-      }
 
       const verdictMatch = msg.body.trim().match(VERDICT_REGEX)
       if (verdictMatch) {
@@ -58,9 +55,16 @@ export class Poller {
 
       await this.ctx.onMessage(msg)
     }
+
+    // Always advance the cursor so filtered messages are not re-fetched
+    this.lastChecked = new Date()
   }
 
   start(intervalMs: number): ReturnType<typeof setInterval> {
-    return setInterval(() => this.poll(), intervalMs)
+    return setInterval(() => {
+      this.poll().catch(err => {
+        console.error('[sms-channel] poll error:', err)
+      })
+    }, intervalMs)
   }
 }
