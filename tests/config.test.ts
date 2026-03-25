@@ -27,7 +27,7 @@ describe('loadConfig', () => {
     })
   })
 
-  test('loads required env vars with defaults', () => {
+  test('loads config from valid env vars', () => {
     const config = loadConfig()
     expect(config.gateway.baseUrl).toBe('http://192.168.1.5:8080')
     expect(config.gateway.login).toBe('testlogin')
@@ -84,5 +84,22 @@ describe('loadConfig', () => {
   test('throws on non-numeric WEBHOOK_PORT', () => {
     process.env.WEBHOOK_PORT = 'abc'
     expect(() => loadConfig()).toThrow('WEBHOOK_PORT must be a number')
+  })
+
+  test('throws on whitespace-only GATEWAY_BASE_URL', () => {
+    process.env.GATEWAY_BASE_URL = '   '
+    expect(() => loadConfig()).toThrow('Missing required env var: GATEWAY_BASE_URL')
+  })
+
+  test('throws on out-of-range WEBHOOK_PORT', () => {
+    process.env.WEBHOOK_PORT = '99999'
+    expect(() => loadConfig()).toThrow('WEBHOOK_PORT must be between 1 and 65535')
+  })
+
+  test('ignores empty entries in ALLOWED_PHONE_NUMBERS', () => {
+    process.env.ALLOWED_PHONE_NUMBERS = '+1111, , +2222'
+    const config = loadConfig()
+    expect(config.allowedPhoneNumbers.size).toBe(2)
+    expect(config.allowedPhoneNumbers.has('+1111')).toBe(true)
   })
 })

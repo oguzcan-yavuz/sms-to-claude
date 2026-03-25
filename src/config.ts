@@ -12,7 +12,9 @@ export interface Config {
 function required(key: string): string {
   const val = process.env[key]
   if (!val) throw new Error(`Missing required env var: ${key}`)
-  return val
+  const trimmed = val.trim()
+  if (!trimmed) throw new Error(`Missing required env var: ${key}`)
+  return trimmed
 }
 
 export function loadConfig(): Config {
@@ -23,6 +25,7 @@ export function loadConfig(): Config {
   if (portRaw) {
     const parsed = parseInt(portRaw, 10)
     if (isNaN(parsed)) throw new Error(`WEBHOOK_PORT must be a number, got: "${portRaw}"`)
+    if (parsed < 1 || parsed > 65535) throw new Error('WEBHOOK_PORT must be between 1 and 65535')
     webhookPort = parsed
   } else {
     const portFromUrl = new URL(webhookUrl).port
@@ -39,7 +42,7 @@ export function loadConfig(): Config {
     webhookUrl,
     webhookPort,
     allowedPhoneNumbers: new Set(
-      required('ALLOWED_PHONE_NUMBERS').split(',').map(n => n.trim())
+      required('ALLOWED_PHONE_NUMBERS').split(',').map(n => n.trim()).filter(n => n.length > 0)
     ),
   }
 }
