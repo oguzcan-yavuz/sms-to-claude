@@ -1,39 +1,19 @@
-// scripts/test-sms.ts — test Twilio integration without Claude Code
-import twilio from 'twilio'
+// scripts/test-sms.ts — smoke test the Android SMS gateway integration without Claude Code
 import { loadConfig } from '../src/config'
-import { Poller } from '../src/poller'
+import { GatewayClient } from '../src/gateway'
 
 const config = loadConfig()
-const client = twilio(config.twilio.accountSid, config.twilio.authToken)
+const client = new GatewayClient(config.gateway)
+const owner = [...config.allowedPhoneNumbers][0]
 
-// 1. Send a test SMS to yourself
+// 1. Register webhook so inbound messages are delivered to this machine
+console.log('Registering webhook...')
+await client.registerWebhook(config.webhookUrl)
+console.log('Webhook registered.')
+
+// 2. Send a test SMS to yourself
 console.log('Sending test SMS...')
-await client.messages.create({
-    body: 'sms-to-claude test: outbound works',
-    from: config.twilio.phoneNumber,
-    to: [...config.allowedPhoneNumbers][0],
-})
+await client.send(owner, 'sms-to-claude test: outbound works')
 console.log('Sent.')
 
-// 2. Start polling and log whatever arrives
-console.log(`Polling for inbound SMS (send one to ${config.twilio.phoneNumber})...`)
-const poller = new Poller({
-    twilioClient: client as any,
-    twilioPhoneNumber: config.twilio.phoneNumber,
-    allowedPhoneNumbers: config.allowedPhoneNumbers,
-    onMessage: async msg => {
-        console.log(`[inbound] from=${msg.from} body="${msg.body}"`)
-        // Echo it back so you can verify the full loop
-        await client.messages.create({
-            body: `echo: ${msg.body}`,
-            from: config.twilio.phoneNumber,
-            to: msg.from,
-        })
-        console.log('[reply sent]')
-    },
-    onVerdict: async (behavior, id) => {
-        console.log(`[verdict] ${behavior} ${id}`)
-    },
-})
-
-poller.start(config.pollIntervalMs)
+console.log(`Start the MCP server to receive inbound SMS at ${config.webhookUrl}`)
