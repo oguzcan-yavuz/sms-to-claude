@@ -164,17 +164,15 @@ You should receive the message within a few seconds.
 
 ### Test 2: Inbound SMS (receive)
 
-Starts the webhook server and logs any SMS that arrives from your allowlisted number:
+Start the webhook server:
 
 ```bash
 bun scripts/test-receive.ts
 ```
 
-Then send an SMS from your phone (to the SIM in the Android device). You should see it printed immediately.
+**With a real phone:** run `test-sms.ts` first (it registers the webhook), then send an SMS from your phone. You should see it logged within seconds.
 
-### Test 3: Simulate a webhook without a phone
-
-While `test-receive.ts` is running, send a fake webhook with curl (replace `sender` with your `ALLOWED_PHONE_NUMBERS` value):
+**Without a phone:** simulate a webhook with curl while `test-receive.ts` is running (replace `sender` with your `ALLOWED_PHONE_NUMBERS` value):
 
 ```bash
 curl -X POST http://localhost:8081/webhook \
@@ -193,6 +191,6 @@ curl -X POST http://localhost:8081/webhook \
   }'
 ```
 
-You should get `OK` back and see the message logged in the `test-receive.ts` terminal.
+You should get `OK` back and see the message logged.
 
 > **Connectivity check:** If webhooks don't arrive from the phone, verify the phone can reach your Mac at `http://<mac-ip>:8081/webhook` using a browser app on the phone.
