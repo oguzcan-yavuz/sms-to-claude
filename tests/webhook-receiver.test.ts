@@ -109,13 +109,22 @@ describe('WebhookReceiver', () => {
 })
 
 describe('VERDICT_REGEX', () => {
-  test('matches "yes abcde"', () => {
+  test('matches 5-char id "yes abcde"', () => {
     expect('yes abcde'.match(VERDICT_REGEX)).toBeTruthy()
+  })
+  test('matches 3-char id "yes xyz"', () => {
+    expect('yes xyz'.match(VERDICT_REGEX)).toBeTruthy()
   })
   test('matches "NO ABCDE" case-insensitively', () => {
     expect('NO ABCDE'.match(VERDICT_REGEX)).toBeTruthy()
   })
   test('does not match plain messages', () => {
     expect('hello world'.match(VERDICT_REGEX)).toBeNull()
+  })
+  test('does not match id shorter than 3 chars', () => {
+    expect('yes ab'.match(VERDICT_REGEX)).toBeNull()
+  })
+  test('does not match id longer than 8 chars', () => {
+    expect('yes abcdefghi'.match(VERDICT_REGEX)).toBeNull()
   })
 })

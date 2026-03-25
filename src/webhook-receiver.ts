@@ -1,7 +1,7 @@
 import type { GatewayMessage } from './gateway.js'
 
 export { type GatewayMessage }
-export const VERDICT_REGEX = /^(yes|no)\s+([a-z]{5})$/i
+export const VERDICT_REGEX = /^(yes|no)\s+([a-z0-9]{3,8})$/i
 
 export interface ReceiverContext {
   allowedPhoneNumbers: Set<string>

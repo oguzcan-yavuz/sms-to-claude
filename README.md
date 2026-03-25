@@ -5,9 +5,11 @@ A [Claude Code Channel](https://code.claude.com/docs/en/channels-reference) that
 ```mermaid
 flowchart LR
     phone(["📱 Your phone"])
-    gateway["SMS Gateway\n(Android phone)"]
-    server["SMS Channel Server\n(MCP, Bun)"]
-    claude["Claude Code\n(your project)"]
+    gateway["SMS Gateway
+    (Android phone)"]
+    server["SMS Channel Server
+    (MCP, Bun)"]
+    claude["Claude Code"]
 
     phone -->|"SMS command"| gateway
     gateway -->|"webhook"| server
@@ -28,10 +30,10 @@ flowchart LR
   Tool: Bash
   rm -rf dist/
 
-  Reply: yes abcde OR no abcde
+  Reply: yes x7k OR no x7k
   ```
 
-  Reply `yes abcde` or `no abcde` to approve or deny.
+  Reply `yes x7k` or `no x7k` to approve or deny. The short code is a unique ID for that request — it keeps your reply matched to the right prompt if multiple are queued.
 
 ## Requirements
 
