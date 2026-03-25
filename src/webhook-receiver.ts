@@ -42,8 +42,8 @@ export class WebhookReceiver {
 
     const { messageId, message, sender, receivedAt } = payload.payload
 
-    if (!this.ctx.allowedPhoneNumbers.has(sender)) return new Response('OK')
-    if (this.processedSids.has(messageId)) return new Response('OK')
+    if (!this.ctx.allowedPhoneNumbers.has(sender)) return new Response('Ignored: sender not allowed')
+    if (this.processedSids.has(messageId)) return new Response('Ignored: duplicate')
 
     this.processedSids.add(messageId)
 
