@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 // src/index.ts
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { loadConfig } from './config.js'
 import { GatewayClient } from './gateway.js'
@@ -17,7 +16,7 @@ const gatewayClient = new GatewayClient(config.gateway)
 const owner = [...config.allowedPhoneNumbers][0] // single owner
 
 // --- MCP server ---
-const mcp = new Server(
+const mcp = new McpServer(
   { name: 'sms', version: '0.2.0' },
   {
     capabilities: {
@@ -25,7 +24,6 @@ const mcp = new Server(
         'claude/channel': {},
         'claude/channel/permission': {},
       },
-      tools: {},
     },
     instructions:
       'Commands arrive via SMS from the owner as <channel source="sms" ...> tags. ' +
@@ -35,7 +33,7 @@ const mcp = new Server(
 )
 
 function sendNotification(method: string, params: Record<string, unknown>): Promise<void> {
-  return (mcp as any).notification({ method, params })
+  return mcp.server.notification({ method, params })
 }
 
 async function sendSms(text: string): Promise<void> {
@@ -54,23 +52,13 @@ const permMgr = new PermissionManager({
 })
 
 // --- sms_reply tool ---
-mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [{
-    name: 'sms_reply',
+mcp.registerTool(
+  'sms_reply',
+  {
     description: 'Send a message back to the owner via SMS',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        text: { type: 'string', description: 'The message to send' },
-      },
-      required: ['text'],
-    },
-  }],
-}))
-
-mcp.setRequestHandler(CallToolRequestSchema, async req => {
-  if (req.params.name === 'sms_reply') {
-    const { text } = req.params.arguments as { text: string }
+    inputSchema: { text: z.string().describe('The message to send') },
+  },
+  async ({ text }) => {
     try {
       await sendSms(text)
       return { content: [{ type: 'text', text: 'sent' }] }
@@ -81,9 +69,8 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         isError: true,
       }
     }
-  }
-  throw new Error(`Unknown tool: ${req.params.name}`)
-})
+  },
+)
 
 // --- Permission request handler ---
 const PermissionRequestSchema = z.object({
@@ -96,7 +83,7 @@ const PermissionRequestSchema = z.object({
   }),
 })
 
-mcp.setNotificationHandler(PermissionRequestSchema, async notif => {
+mcp.server.setNotificationHandler(PermissionRequestSchema, async notif => {
   const { request_id, tool_name, description, input_preview } = notif.params
   await permMgr.handleRequest(request_id, tool_name, description, input_preview)
 })
