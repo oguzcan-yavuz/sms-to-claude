@@ -4,20 +4,21 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import twilio from 'twilio'
 import { loadConfig } from './config.js'
-import { Poller } from './poller.js'
+import { GatewayClient } from './gateway.js'
+import { WebhookReceiver } from './webhook-receiver.js'
 import { PermissionManager } from './permissions.js'
 
 const MAX_SMS_CHARS = 1600
 const TRUNCATED_SUFFIX = ' [truncated]'
 
 const config = loadConfig()
-const twilioClient = twilio(config.twilio.accountSid, config.twilio.authToken)
+const gatewayClient = new GatewayClient(config.gateway)
+const owner = [...config.allowedPhoneNumbers][0] // single owner
 
 // --- MCP server ---
 const mcp = new Server(
-  { name: 'sms', version: '0.1.0' },
+  { name: 'sms', version: '0.2.0' },
   {
     capabilities: {
       experimental: {
@@ -27,27 +28,21 @@ const mcp = new Server(
       tools: {},
     },
     instructions:
-      'You are working on the refutr project. Commands arrive via SMS from the owner as <channel source="sms" ...> tags. ' +
+      'Commands arrive via SMS from the owner as <channel source="sms" ...> tags. ' +
       'Always reply with the sms_reply tool when your work is done or when you need to ask something. ' +
       'Be concise — this is SMS. If sms_reply fails, log the error to the terminal.',
   },
 )
 
-// Helper to send notifications with custom methods not in the SDK type union
 function sendNotification(method: string, params: Record<string, unknown>): Promise<void> {
   return (mcp as any).notification({ method, params })
 }
 
-// --- sendSms helper used by both the reply tool and PermissionManager ---
 async function sendSms(text: string): Promise<void> {
   const body = text.length > MAX_SMS_CHARS
     ? text.slice(0, MAX_SMS_CHARS - TRUNCATED_SUFFIX.length) + TRUNCATED_SUFFIX
     : text
-  await twilioClient.messages.create({
-    body,
-    from: config.twilio.phoneNumber,
-    to: [...config.allowedPhoneNumbers][0], // single owner
-  })
+  await gatewayClient.send(owner, body)
 }
 
 // --- Permission manager ---
@@ -106,10 +101,8 @@ mcp.setNotificationHandler(PermissionRequestSchema, async notif => {
   await permMgr.handleRequest(request_id, tool_name, description, input_preview)
 })
 
-// --- Poller ---
-const poller = new Poller({
-  twilioClient: twilioClient as any, // Twilio SDK types are compatible
-  twilioPhoneNumber: config.twilio.phoneNumber,
+// --- Webhook receiver ---
+const receiver = new WebhookReceiver({
   allowedPhoneNumbers: config.allowedPhoneNumbers,
   onMessage: async msg => {
     await sendNotification('notifications/claude/channel', {
@@ -122,10 +115,11 @@ const poller = new Poller({
   },
 })
 
-// --- Connect and start loops ---
+// --- Connect and start ---
 try {
   await mcp.connect(new StdioServerTransport())
-  poller.start(config.pollIntervalMs)
+  receiver.start(config.webhookPort)
+  await gatewayClient.registerWebhook(config.webhookUrl)
   permMgr.startSweep()
 } catch (err) {
   console.error('[sms-channel] startup failed:', err)
