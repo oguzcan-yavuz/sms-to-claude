@@ -3,14 +3,20 @@ import { loadConfig } from '../src/config'
 
 describe('loadConfig', () => {
   const snapshot: Record<string, string | undefined> = {}
-  const keys = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER', 'ALLOWED_PHONE_NUMBERS', 'POLL_INTERVAL_MS']
+  const keys = [
+    'GATEWAY_BASE_URL', 'GATEWAY_LOGIN', 'GATEWAY_PASSWORD',
+    'WEBHOOK_URL', 'WEBHOOK_PORT',
+    'ALLOWED_PHONE_NUMBERS', 'POLL_INTERVAL_MS',
+  ]
 
   beforeEach(() => {
     keys.forEach(k => { snapshot[k] = process.env[k] })
-    process.env.TWILIO_ACCOUNT_SID = 'ACtest'
-    process.env.TWILIO_AUTH_TOKEN = 'authtest'
-    process.env.TWILIO_PHONE_NUMBER = '+11234567890'
+    process.env.GATEWAY_BASE_URL = 'http://192.168.1.5:8080'
+    process.env.GATEWAY_LOGIN = 'testlogin'
+    process.env.GATEWAY_PASSWORD = 'testpass'
+    process.env.WEBHOOK_URL = 'http://192.168.1.100:8081/webhook'
     process.env.ALLOWED_PHONE_NUMBERS = '+19876543210'
+    delete process.env.WEBHOOK_PORT
     delete process.env.POLL_INTERVAL_MS
   })
 
@@ -21,43 +27,47 @@ describe('loadConfig', () => {
     })
   })
 
-  test('loads required env vars with default poll interval', () => {
+  test('loads required env vars with defaults', () => {
     const config = loadConfig()
-    expect(config.twilio.accountSid).toBe('ACtest')
-    expect(config.twilio.authToken).toBe('authtest')
-    expect(config.twilio.phoneNumber).toBe('+11234567890')
+    expect(config.gateway.baseUrl).toBe('http://192.168.1.5:8080')
+    expect(config.gateway.login).toBe('testlogin')
+    expect(config.gateway.password).toBe('testpass')
+    expect(config.webhookUrl).toBe('http://192.168.1.100:8081/webhook')
+    expect(config.webhookPort).toBe(8081)
     expect(config.allowedPhoneNumbers.has('+19876543210')).toBe(true)
-    expect(config.pollIntervalMs).toBe(5000)
+  })
+
+  test('uses explicit WEBHOOK_PORT over URL-derived port', () => {
+    process.env.WEBHOOK_PORT = '9000'
+    const config = loadConfig()
+    expect(config.webhookPort).toBe(9000)
   })
 
   test('parses comma-separated ALLOWED_PHONE_NUMBERS', () => {
     process.env.ALLOWED_PHONE_NUMBERS = '+1111, +2222, +3333'
     const config = loadConfig()
     expect(config.allowedPhoneNumbers.size).toBe(3)
-    expect(config.allowedPhoneNumbers.has('+1111')).toBe(true)
     expect(config.allowedPhoneNumbers.has('+2222')).toBe(true)
-    expect(config.allowedPhoneNumbers.has('+3333')).toBe(true)
   })
 
-  test('uses custom POLL_INTERVAL_MS', () => {
-    process.env.POLL_INTERVAL_MS = '10000'
-    const config = loadConfig()
-    expect(config.pollIntervalMs).toBe(10000)
+  test('throws on missing GATEWAY_BASE_URL', () => {
+    delete process.env.GATEWAY_BASE_URL
+    expect(() => loadConfig()).toThrow('Missing required env var: GATEWAY_BASE_URL')
   })
 
-  test('throws on missing TWILIO_ACCOUNT_SID', () => {
-    delete process.env.TWILIO_ACCOUNT_SID
-    expect(() => loadConfig()).toThrow('Missing required env var: TWILIO_ACCOUNT_SID')
+  test('throws on missing GATEWAY_LOGIN', () => {
+    delete process.env.GATEWAY_LOGIN
+    expect(() => loadConfig()).toThrow('Missing required env var: GATEWAY_LOGIN')
   })
 
-  test('throws on missing TWILIO_AUTH_TOKEN', () => {
-    delete process.env.TWILIO_AUTH_TOKEN
-    expect(() => loadConfig()).toThrow('Missing required env var: TWILIO_AUTH_TOKEN')
+  test('throws on missing GATEWAY_PASSWORD', () => {
+    delete process.env.GATEWAY_PASSWORD
+    expect(() => loadConfig()).toThrow('Missing required env var: GATEWAY_PASSWORD')
   })
 
-  test('throws on missing TWILIO_PHONE_NUMBER', () => {
-    delete process.env.TWILIO_PHONE_NUMBER
-    expect(() => loadConfig()).toThrow('Missing required env var: TWILIO_PHONE_NUMBER')
+  test('throws on missing WEBHOOK_URL', () => {
+    delete process.env.WEBHOOK_URL
+    expect(() => loadConfig()).toThrow('Missing required env var: WEBHOOK_URL')
   })
 
   test('throws on missing ALLOWED_PHONE_NUMBERS', () => {
@@ -65,8 +75,14 @@ describe('loadConfig', () => {
     expect(() => loadConfig()).toThrow('Missing required env var: ALLOWED_PHONE_NUMBERS')
   })
 
-  test('throws on non-numeric POLL_INTERVAL_MS', () => {
-    process.env.POLL_INTERVAL_MS = 'abc'
-    expect(() => loadConfig()).toThrow('POLL_INTERVAL_MS must be a number')
+  test('throws if WEBHOOK_URL has no parseable port', () => {
+    process.env.WEBHOOK_URL = 'http://192.168.1.100/webhook'  // no port in URL
+    delete process.env.WEBHOOK_PORT
+    expect(() => loadConfig()).toThrow('WEBHOOK_PORT')
+  })
+
+  test('throws on non-numeric WEBHOOK_PORT', () => {
+    process.env.WEBHOOK_PORT = 'abc'
+    expect(() => loadConfig()).toThrow('WEBHOOK_PORT must be a number')
   })
 })

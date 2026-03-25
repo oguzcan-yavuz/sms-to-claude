@@ -1,11 +1,12 @@
 export interface Config {
-  twilio: {
-    accountSid: string
-    authToken: string
-    phoneNumber: string
+  gateway: {
+    baseUrl: string
+    login: string
+    password: string
   }
+  webhookUrl: string
+  webhookPort: number
   allowedPhoneNumbers: Set<string>
-  pollIntervalMs: number
 }
 
 function required(key: string): string {
@@ -15,20 +16,30 @@ function required(key: string): string {
 }
 
 export function loadConfig(): Config {
+  const webhookUrl = required('WEBHOOK_URL')
+
+  let webhookPort: number
+  const portRaw = process.env.WEBHOOK_PORT
+  if (portRaw) {
+    const parsed = parseInt(portRaw, 10)
+    if (isNaN(parsed)) throw new Error(`WEBHOOK_PORT must be a number, got: "${portRaw}"`)
+    webhookPort = parsed
+  } else {
+    const portFromUrl = new URL(webhookUrl).port
+    if (!portFromUrl) throw new Error('WEBHOOK_PORT must be set (could not derive port from WEBHOOK_URL)')
+    webhookPort = parseInt(portFromUrl, 10)
+  }
+
   return {
-    twilio: {
-      accountSid: required('TWILIO_ACCOUNT_SID'),
-      authToken: required('TWILIO_AUTH_TOKEN'),
-      phoneNumber: required('TWILIO_PHONE_NUMBER'),
+    gateway: {
+      baseUrl: required('GATEWAY_BASE_URL'),
+      login: required('GATEWAY_LOGIN'),
+      password: required('GATEWAY_PASSWORD'),
     },
+    webhookUrl,
+    webhookPort,
     allowedPhoneNumbers: new Set(
       required('ALLOWED_PHONE_NUMBERS').split(',').map(n => n.trim())
     ),
-    pollIntervalMs: (() => {
-      const raw = process.env.POLL_INTERVAL_MS ?? '5000'
-      const val = parseInt(raw, 10)
-      if (isNaN(val)) throw new Error(`POLL_INTERVAL_MS must be a number, got: "${raw}"`)
-      return val
-    })(),
   }
 }
