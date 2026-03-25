@@ -130,3 +130,67 @@ tests/
 ```bash
 bun test
 ```
+
+## Testing the gateway integration
+
+Before wiring up Claude Code, verify the Android gateway works end-to-end with the scripts in `scripts/`.
+
+### Android device setup
+
+1. Download the APK from [github.com/capcom6/android-sms-gateway/releases](https://github.com/capcom6/android-sms-gateway/releases) and install it (enable "Install from unknown sources" in Android settings if prompted)
+2. Open the app → tap **Offline** at the bottom to start the local server — your phone's local IP and port `:8080` appear on screen
+3. Tap the hamburger menu → **Settings → API** — note your **Login** and **Password**
+4. Make sure the phone and your Mac are on the same WiFi network
+
+Find your Mac's local IP:
+
+```bash
+ipconfig getifaddr en0
+```
+
+Fill in `.env` with the real values before running any scripts.
+
+### Test 1: Outbound SMS
+
+Registers the webhook with the phone and sends a test SMS to your number:
+
+```bash
+bun scripts/test-sms.ts
+```
+
+You should receive the message within a few seconds.
+
+### Test 2: Inbound SMS (receive)
+
+Starts the webhook server and logs any SMS that arrives from your allowlisted number:
+
+```bash
+bun scripts/test-receive.ts
+```
+
+Then send an SMS from your phone (to the SIM in the Android device). You should see it printed immediately.
+
+### Test 3: Simulate a webhook without a phone
+
+While `test-receive.ts` is running, send a fake webhook with curl (replace `sender` with your `ALLOWED_PHONE_NUMBERS` value):
+
+```bash
+curl -X POST http://localhost:8081/webhook \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "event": "sms:received",
+    "id": "test-1",
+    "payload": {
+      "messageId": "msg-001",
+      "message": "hello claude",
+      "sender": "+90xxxxxxxxx",
+      "recipient": "+90yyyyy",
+      "simNumber": 1,
+      "receivedAt": "2026-03-26T10:00:00Z"
+    }
+  }'
+```
+
+You should get `OK` back and see the message logged in the `test-receive.ts` terminal.
+
+> **Connectivity check:** If webhooks don't arrive from the phone, verify the phone can reach your Mac at `http://<mac-ip>:8081/webhook` using a browser app on the phone.
