@@ -5,21 +5,21 @@ A [Claude Code Channel](https://code.claude.com/docs/en/channels-reference) that
 ```mermaid
 flowchart LR
     phone(["📱 Your phone"])
-    twilio["Twilio"]
+    gateway["SMS Gateway\n(Android phone)"]
     server["SMS Channel Server\n(MCP, Bun)"]
     claude["Claude Code\n(your project)"]
 
-    phone -->|"SMS command"| twilio
-    twilio -->|"poll every 5s"| server
+    phone -->|"SMS command"| gateway
+    gateway -->|"webhook"| server
     server <-->|"stdio"| claude
     claude -->|"sms_reply tool"| server
-    server -->|"SMS reply"| twilio
-    twilio -->|"SMS"| phone
+    server -->|"SMS reply"| gateway
+    gateway -->|"SMS"| phone
 ```
 
 ## How it works
 
-- **Send a command** — SMS your Twilio number, Claude receives it and gets to work
+- **Send a command** — SMS your number, Claude receives it via the Android gateway and gets to work
 - **Get a reply** — Claude uses the `sms_reply` tool to SMS you when done
 - **Permission relay** — when Claude needs to run a tool requiring approval, you get an SMS like:
 
@@ -37,7 +37,8 @@ flowchart LR
 
 - [Bun](https://bun.sh) installed
 - Claude Code v2.1.81+ with a claude.ai login (not API key auth)
-- Twilio account with a phone number (~$1/month + pennies per SMS)
+- An Android phone (any cheap/old one) with the [SMS Gateway for Android](https://github.com/capcom6/android-sms-gateway) app installed
+- Both the Android phone and your Mac on the same local network
 
 ## Setup
 
@@ -56,12 +57,15 @@ cp .env.example .env
 Edit `.env`:
 
 ```
-TWILIO_ACCOUNT_SID=ACxxx
-TWILIO_AUTH_TOKEN=xxx
-TWILIO_PHONE_NUMBER=+1xxxxxxxxxx     # your Twilio number
-ALLOWED_PHONE_NUMBERS=+90xxxxxxxxx  # your personal number (allowlist)
-POLL_INTERVAL_MS=5000               # optional, defaults to 5s
+GATEWAY_BASE_URL=http://192.168.1.5:8080     # Android phone's local IP + port 8080
+GATEWAY_LOGIN=your-gateway-login
+GATEWAY_PASSWORD=your-gateway-password
+WEBHOOK_URL=http://192.168.1.100:8081/webhook # This machine's local IP, any free port
+WEBHOOK_PORT=8081                             # Port for the local webhook server (optional if in WEBHOOK_URL)
+ALLOWED_PHONE_NUMBERS=+90xxxxxxxxx            # Your personal number (allowlist)
 ```
+
+> **Finding your credentials:** Open the SMS Gateway app on the Android phone → tap the hamburger menu → Settings → API. Your login and password are shown there. The phone's local IP is shown on the Local Server screen.
 
 **3. Register with Claude Code**
 
@@ -95,7 +99,7 @@ The `--dangerously-load-development-channels` flag is required during the resear
 
 ## Usage
 
-Once running, SMS your Twilio number from your allowlisted phone. Claude receives the message, works on your project, and replies via SMS when done.
+Once running, SMS your number from your allowlisted phone. Claude receives the message, works on your project, and replies via SMS when done.
 
 **Tips:**
 - Responses longer than 1600 characters are truncated with `[truncated]` — ask Claude to summarize if needed
@@ -110,13 +114,14 @@ Only phone numbers listed in `ALLOWED_PHONE_NUMBERS` can send commands to Claude
 
 ```
 src/
-  config.ts       — env var loading and validation
-  poller.ts       — Twilio poll loop, deduplication, allowlist, verdict detection
-  permissions.ts  — permission relay state, timeout sweep
-  index.ts        — MCP server, tool registration, wiring
+  config.ts           — env var loading and validation
+  gateway.ts          — Android SMS Gateway client (send + webhook registration)
+  webhook-receiver.ts — Inbound SMS webhook server, deduplication, allowlist, verdict detection
+  permissions.ts      — permission relay state, timeout sweep
+  index.ts            — MCP server, tool registration, wiring
 tests/
   config.test.ts
-  poller.test.ts
+  gateway.test.ts
   permissions.test.ts
 ```
 
