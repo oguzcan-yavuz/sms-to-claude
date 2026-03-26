@@ -65,9 +65,12 @@ GATEWAY_PASSWORD=your-gateway-password
 WEBHOOK_URL=http://192.168.1.100:8081/webhook # This machine's local IP, any free port
 WEBHOOK_PORT=8081                             # Port for the local webhook server (optional if in WEBHOOK_URL)
 ALLOWED_PHONE_NUMBERS=+90xxxxxxxxx            # Your personal number (allowlist)
+WEBHOOK_SIGNING_KEY=your-signing-key          # From: app Settings → Webhooks → Signing Key
 ```
 
 > **Finding your credentials:** Open the SMS Gateway app on the Android phone → tap the hamburger menu → Settings → API. Your login and password are shown there. The phone's local IP is shown on the Local Server screen.
+
+> **Webhook signing key:** In the app, go to Settings → Webhooks → Signing Key. Generate a key there (or enter your own) and paste the same value into `WEBHOOK_SIGNING_KEY`. When set, every incoming webhook is verified with HMAC-SHA256 — requests with a missing or invalid signature are rejected with 401.
 
 **3. Register with Claude Code**
 
@@ -111,7 +114,13 @@ Once running, SMS your number from your allowlisted phone. Claude receives the m
 
 ## Security
 
-Only phone numbers listed in `ALLOWED_PHONE_NUMBERS` can send commands to Claude. All other senders are silently dropped. Keep your `.env` file out of version control (it's gitignored).
+| Layer | Mechanism |
+|---|---|
+| Sender allowlist | Only numbers in `ALLOWED_PHONE_NUMBERS` are accepted — all others are silently dropped |
+| Webhook authentication | HMAC-SHA256 signature verification on every inbound webhook (`WEBHOOK_SIGNING_KEY`) |
+| Replay attack protection | Webhooks with a timestamp older than 5 minutes are rejected |
+
+Keep your `.env` file out of version control (it's gitignored).
 
 ## Project structure
 
