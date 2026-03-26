@@ -94,10 +94,11 @@ The `--env-file` flag tells Bun exactly where to find the credentials, regardles
 From your project directory:
 
 ```bash
-claude --dangerously-load-development-channels server:sms
+claude --dangerously-skip-permissions --dangerously-load-development-channels server:sms
 ```
 
-The `--dangerously-load-development-channels` flag is required during the research preview. It bypasses the channel allowlist for the named MCP server entry.
+- `--dangerously-skip-permissions` — required for the SMS channel to inject incoming messages into Claude's context; without it, notifications from the MCP server are silently ignored
+- `--dangerously-load-development-channels` — required during the research preview; bypasses the channel allowlist for the named MCP server entry
 
 ## Usage
 

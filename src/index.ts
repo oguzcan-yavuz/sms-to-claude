@@ -2,6 +2,7 @@
 // src/index.ts
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { appendFileSync } from 'fs'
 import { z } from 'zod'
 import { loadConfig } from './config.js'
 import { GatewayClient } from './gateway.js'
@@ -10,6 +11,13 @@ import { PermissionManager } from './permissions.js'
 
 const MAX_SMS_CHARS = 1600
 const TRUNCATED_SUFFIX = ' [truncated]'
+const LOG_FILE = '/tmp/sms-to-claude.log'
+
+function log(...args: unknown[]) {
+  const line = `[${new Date().toISOString()}] ${args.map(String).join(' ')}\n`
+  process.stderr.write(line)
+  appendFileSync(LOG_FILE, line)
+}
 
 const config = loadConfig()
 const gatewayClient = new GatewayClient(config.gateway)
@@ -92,10 +100,12 @@ mcp.server.setNotificationHandler(PermissionRequestSchema, async notif => {
 const receiver = new WebhookReceiver({
   allowedPhoneNumbers: config.allowedPhoneNumbers,
   onMessage: async msg => {
+    log('[sms-channel] forwarding to claude:', msg.body)
     await sendNotification('notifications/claude/channel', {
       content: msg.body,
       meta: { from: msg.from, message_sid: msg.sid },
     })
+    log('[sms-channel] notification sent')
   },
   onVerdict: async (behavior, requestId) => {
     await permMgr.handleVerdict(behavior, requestId)
@@ -103,12 +113,20 @@ const receiver = new WebhookReceiver({
 })
 
 // --- Connect and start ---
+log('[sms-channel] starting...')
 try {
   await mcp.connect(new StdioServerTransport())
   receiver.start(config.webhookPort)
-  await gatewayClient.registerWebhook(config.webhookUrl)
   permMgr.startSweep()
+  log('[sms-channel] started, webhook listening on port', config.webhookPort)
 } catch (err) {
-  console.error('[sms-channel] startup failed:', err)
+  log('[sms-channel] startup failed:', err)
   process.exit(1)
+}
+
+try {
+  await gatewayClient.registerWebhook(config.webhookUrl)
+  log('[sms-channel] webhook registered:', config.webhookUrl)
+} catch (err) {
+  log('[sms-channel] webhook registration failed (is ngrok running?):', err)
 }

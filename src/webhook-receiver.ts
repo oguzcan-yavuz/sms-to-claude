@@ -42,7 +42,10 @@ export class WebhookReceiver {
 
     const { messageId, message, sender, receivedAt } = payload.payload
 
-    if (!this.ctx.allowedPhoneNumbers.has(sender)) return new Response('Ignored: sender not allowed')
+    if (!this.ctx.allowedPhoneNumbers.has(sender)) {
+      console.error(`[sms-channel] ignored: sender ${sender} not in allowlist`)
+      return new Response('Ignored: sender not allowed')
+    }
     if (this.processedSids.has(messageId)) return new Response('Ignored: duplicate')
 
     this.processedSids.add(messageId)
@@ -62,6 +65,7 @@ export class WebhookReceiver {
       return new Response('OK')
     }
 
+    console.error(`[sms-channel] inbound: from=${sender} body="${message}"`)
     await this.ctx.onMessage(msg)
     return new Response('OK')
   }
