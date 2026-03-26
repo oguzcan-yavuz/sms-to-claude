@@ -99,6 +99,7 @@ mcp.server.setNotificationHandler(PermissionRequestSchema, async notif => {
 // --- Webhook receiver ---
 const receiver = new WebhookReceiver({
   allowedPhoneNumbers: config.allowedPhoneNumbers,
+  signingKey: config.webhookSigningKey,
   onMessage: async msg => {
     log('[sms-channel] forwarding to claude:', msg.body)
     await sendNotification('notifications/claude/channel', {

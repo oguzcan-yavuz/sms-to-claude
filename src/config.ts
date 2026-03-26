@@ -6,6 +6,7 @@ export interface Config {
   }
   webhookUrl: string
   webhookPort: number
+  webhookSigningKey: string | undefined
   allowedPhoneNumbers: Set<string>
 }
 
@@ -41,6 +42,7 @@ export function loadConfig(): Config {
     },
     webhookUrl,
     webhookPort,
+    webhookSigningKey: process.env.WEBHOOK_SIGNING_KEY?.trim() || undefined,
     allowedPhoneNumbers: new Set(
       required('ALLOWED_PHONE_NUMBERS').split(',').map(n => n.trim()).filter(n => n.length > 0)
     ),
