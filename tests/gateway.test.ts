@@ -27,11 +27,11 @@ describe('GatewayClient.send', () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1)
     const [url, opts] = fetchSpy.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`${BASE_CONFIG.baseUrl}/api/v1/message`)
+    expect(url).toBe(`${BASE_CONFIG.baseUrl}/message`)
     expect(opts.method).toBe('POST')
     const body = JSON.parse(opts.body as string)
     expect(body.phoneNumbers).toEqual(['+19876543210'])
-    expect(body.textMessage.text).toBe('hello world')
+    expect(body.message).toBe('hello world')
     expect((opts.headers as Record<string, string>)['Authorization'])
       .toBe('Basic ' + btoa('testlogin:testpass'))
   })
@@ -65,7 +65,7 @@ describe('GatewayClient.registerWebhook', () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1)
     const [url, opts] = fetchSpy.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(`${BASE_CONFIG.baseUrl}/api/v1/webhooks`)
+    expect(url).toBe(`${BASE_CONFIG.baseUrl}/webhooks`)
     expect(opts.method).toBe('POST')
     const body = JSON.parse(opts.body as string)
     expect(body.url).toBe('http://192.168.1.100:8081/webhook')

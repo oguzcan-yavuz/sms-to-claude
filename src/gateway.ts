@@ -48,7 +48,6 @@ export class GatewayClient {
   }
 
   async registerWebhook(webhookUrl: string): Promise<void> {
-    await this.client.deleteWebhook(WEBHOOK_ID).catch(() => {})
     await this.client.registerWebhook({
       id: WEBHOOK_ID,
       url: webhookUrl,

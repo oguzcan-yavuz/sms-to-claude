@@ -32,7 +32,7 @@ export class WebhookReceiver {
 
   async handleRequest(req: Request): Promise<Response> {
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 })
+      return new Response('Method not allowed', { status: 400 })
     }
 
     const rawBody = await req.text()
