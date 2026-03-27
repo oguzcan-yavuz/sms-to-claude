@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "start": "bun run src/index.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "ssh": "ssh yvz@192.168.1.8",
+    "attach": "ssh -tt yvz@192.168.1.8 'tmux -S /tmp/claude-sms-tmux attach -t claude-sms'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",
