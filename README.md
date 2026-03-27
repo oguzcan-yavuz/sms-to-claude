@@ -137,6 +137,10 @@ tests/
   permissions.test.ts
 ```
 
+## Unattended / long-running setup
+
+If you want to run this for an extended period without babysitting it (e.g. while traveling), see [RESILIENCE.md](./RESILIENCE.md) for a full guide covering VM auto-start, process supervision, ngrok persistence, Android gateway reliability, and a tested failure simulation checklist.
+
 ## Running tests
 
 ```bash
