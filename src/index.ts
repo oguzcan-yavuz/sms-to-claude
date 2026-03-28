@@ -19,7 +19,6 @@ function log(...args: unknown[]) {
   appendFileSync(LOG_FILE, line)
 }
 
-let taskStartedAt: number | null = null
 
 const config = loadConfig()
 const gatewayClient = new GatewayClient(config.gateway)
@@ -74,7 +73,6 @@ mcp.registerTool(
   },
   async ({ text }) => {
     try {
-      taskStartedAt = null
       await sendSms(text)
       return { content: [{ type: 'text', text: 'sent' }] }
     } catch (err) {
@@ -129,7 +127,6 @@ const receiver = new WebhookReceiver({
   allowedPhoneNumbers: config.allowedPhoneNumbers,
   signingKey: config.webhookSigningKey,
   onMessage: async msg => {
-    taskStartedAt = Date.now()
     log('[sms-channel] forwarding to claude:', msg.body)
     await sendNotification('notifications/claude/channel', {
       content: msg.body,
