@@ -2,7 +2,9 @@
 // src/index.ts
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { appendFileSync } from 'fs'
+import { appendFileSync, existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { homedir } from 'os'
+import { join, dirname } from 'path'
 import { z } from 'zod'
 import { loadConfig } from './config.js'
 import { GatewayClient } from './gateway.js'
@@ -146,9 +148,32 @@ const receiver = new WebhookReceiver({
   },
 })
 
+// --- Self-register Stop hook ---
+function ensureStopHook(): void {
+  const hookCommand = `bun ${join(import.meta.dirname, '../scripts/sms-fallback-hook.ts')}`
+  const settingsPath = join(homedir(), '.claude', 'settings.json')
+  const settings = existsSync(settingsPath)
+    ? JSON.parse(readFileSync(settingsPath, 'utf-8'))
+    : {}
+
+  settings.hooks ??= {}
+  settings.hooks.Stop ??= []
+
+  const already = settings.hooks.Stop.some((entry: any) =>
+    entry.hooks?.some((h: any) => h.command?.includes('sms-fallback-hook'))
+  )
+  if (already) return
+
+  settings.hooks.Stop.push({ hooks: [{ type: 'command', command: hookCommand }] })
+  mkdirSync(dirname(settingsPath), { recursive: true })
+  writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
+  log('[sms-channel] registered Stop hook in', settingsPath)
+}
+
 // --- Connect and start ---
 log('[sms-channel] starting...')
 try {
+  ensureStopHook()
   await mcp.connect(new StdioServerTransport())
   receiver.start(config.webhookPort)
   permMgr.startSweep()

@@ -14,7 +14,7 @@ flowchart LR
     phone -->|"SMS command"| gateway
     gateway -->|"webhook"| server
     server <-->|"stdio"| claude
-    claude -->|"sms_reply tool"| server
+    claude -->|"sms_reply / sms_update"| server
     server -->|"SMS reply"| gateway
     gateway -->|"SMS"| phone
 ```
@@ -22,7 +22,9 @@ flowchart LR
 ## How it works
 
 - **Send a command** — SMS your number, Claude receives it via the Android gateway and gets to work
-- **Get a reply** — Claude uses the `sms_reply` tool to SMS you when done
+- **Progress updates** — Claude uses `sms_update` to send brief status messages mid-task (e.g. "Reading 12 files, running tests now...")
+- **Get a reply** — Claude uses `sms_reply` when work is complete or it needs to ask you something
+- **Fallback reply** — a Stop hook fires at the end of every Claude turn; if `sms_reply` wasn't called (e.g. Claude answered in the terminal), the hook forwards the response via SMS automatically
 - **Permission relay** — when Claude needs to run a tool requiring approval, you get an SMS like:
 
   ```
@@ -109,7 +111,8 @@ Once running, SMS your number from your allowlisted phone. Claude receives the m
 
 **Tips:**
 - Responses longer than 1600 characters are truncated with `[truncated]` — ask Claude to summarize if needed
-- Send `yes <id>` or `no <id>` to respond to permission prompts
+- Send `yes <id>` or `no <id>` to respond to permission prompts — capitalisation and trailing punctuation are handled (e.g. `Yes abc.` works)
+- If your verdict doesn't parse, you'll get an SMS back showing the exact IDs to reply to
 - If you send a new command while a permission prompt is pending, Claude will start on the new command concurrently — sequence your messages deliberately
 
 ## Security
@@ -130,11 +133,16 @@ src/
   gateway.ts          — Android SMS Gateway client (send + webhook registration)
   webhook-receiver.ts — Inbound SMS webhook server, deduplication, allowlist, verdict detection
   permissions.ts      — permission relay state, timeout sweep
-  index.ts            — MCP server, tool registration, wiring
+  index.ts            — MCP server, tool registration, Stop hook registration, wiring
+scripts/
+  sms-fallback-hook.ts — Stop hook: forwards Claude's response via SMS if sms_reply wasn't called
+  test-sms.ts         — manual outbound SMS test
+  test-receive.ts     — manual inbound webhook test
 tests/
   config.test.ts
   gateway.test.ts
   permissions.test.ts
+  webhook-receiver.test.ts
 ```
 
 ## Unattended / long-running setup

@@ -32,15 +32,18 @@ async function postWebhook(receiver: WebhookReceiver, payload: object): Promise<
 describe('WebhookReceiver', () => {
   let onMessage: ReturnType<typeof mock>
   let onVerdict: ReturnType<typeof mock>
+  let onUnrecognizedVerdict: ReturnType<typeof mock>
   let ctx: ReceiverContext
 
   beforeEach(() => {
     onMessage = mock(async () => {})
     onVerdict = mock(async () => {})
+    onUnrecognizedVerdict = mock(async () => {})
     ctx = {
       allowedPhoneNumbers: new Set(['+19876543210']),
       onMessage,
       onVerdict,
+      onUnrecognizedVerdict,
     }
   })
 
@@ -89,6 +92,33 @@ describe('WebhookReceiver', () => {
 
     expect(onVerdict).toHaveBeenCalledTimes(1)
     expect(onVerdict.mock.calls[0]).toEqual(['deny', 'abcde'])
+  })
+
+  test('accepts verdict with uppercase "Yes"', async () => {
+    const receiver = new WebhookReceiver(ctx)
+    await postWebhook(receiver, makeWebhookPayload({ message: 'Yes abcde' }))
+
+    expect(onVerdict).toHaveBeenCalledTimes(1)
+    expect(onVerdict.mock.calls[0]).toEqual(['allow', 'abcde'])
+    expect(onMessage).not.toHaveBeenCalled()
+  })
+
+  test('accepts verdict with trailing punctuation', async () => {
+    const receiver = new WebhookReceiver(ctx)
+    await postWebhook(receiver, makeWebhookPayload({ message: 'yes abcde.' }))
+
+    expect(onVerdict).toHaveBeenCalledTimes(1)
+    expect(onVerdict.mock.calls[0]).toEqual(['allow', 'abcde'])
+    expect(onMessage).not.toHaveBeenCalled()
+  })
+
+  test('calls onUnrecognizedVerdict for near-miss verdict', async () => {
+    const receiver = new WebhookReceiver(ctx)
+    await postWebhook(receiver, makeWebhookPayload({ message: 'yes toolongidthatdoesnotmatch' }))
+
+    expect(onUnrecognizedVerdict).toHaveBeenCalledTimes(1)
+    expect(onVerdict).not.toHaveBeenCalled()
+    expect(onMessage).not.toHaveBeenCalled()
   })
 
   test('returns 400 for non-POST requests', async () => {

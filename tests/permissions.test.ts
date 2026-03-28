@@ -64,4 +64,19 @@ describe('PermissionManager', () => {
     const mgr = new PermissionManager(ctx)
     expect(mgr.hasPending()).toBe(false)
   })
+
+  test('pendingIds returns ids of all pending requests', async () => {
+    const { ctx } = makeCtx()
+    const mgr = new PermissionManager(ctx)
+    await mgr.handleRequest('aaa', 'Bash', 'cmd1', '')
+    await mgr.handleRequest('bbb', 'Write', 'cmd2', '')
+    expect(mgr.pendingIds()).toEqual(expect.arrayContaining(['aaa', 'bbb']))
+    expect(mgr.pendingIds()).toHaveLength(2)
+  })
+
+  test('pendingIds returns empty array when no pending requests', () => {
+    const { ctx } = makeCtx()
+    const mgr = new PermissionManager(ctx)
+    expect(mgr.pendingIds()).toEqual([])
+  })
 })
