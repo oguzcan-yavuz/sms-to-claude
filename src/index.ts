@@ -40,8 +40,9 @@ const mcp = new McpServer(
     },
     instructions:
       'Commands arrive via SMS from the owner as <channel source="sms" ...> tags. ' +
-      'Use sms_update to send progress updates while working (e.g. "Running tests...", "Reading 12 files..."). ' +
-      'Send an sms_update at least every 60 seconds during long-running tasks so the owner knows what you are doing. ' +
+      'IMPORTANT: You MUST call sms_update every 2-3 tool calls during long-running tasks. ' +
+      'The owner has no other way to know what you are doing — silence is indistinguishable from being stuck. ' +
+      'Group recent actions into a single brief update (e.g. "Read 5 files, running tests now..."). ' +
       'Use sms_reply only when your work is fully complete or when you need to ask the owner something. ' +
       'Be concise — this is SMS. If sms_reply fails, log the error to the terminal.',
   },
