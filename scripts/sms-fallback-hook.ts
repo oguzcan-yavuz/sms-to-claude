@@ -8,6 +8,8 @@ import { join } from 'path'
 
 // --- Parse stdin ---
 const raw = await new Response(Bun.stdin.stream()).text()
+import { writeFileSync } from 'fs'
+writeFileSync('/tmp/sms-hook-debug.json', raw) // temporary debug — remove after confirming format
 let input: unknown
 try {
   input = JSON.parse(raw)
