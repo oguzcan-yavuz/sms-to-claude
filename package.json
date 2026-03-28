@@ -6,7 +6,8 @@
     "start": "bun run src/index.ts",
     "test": "bun test",
     "ssh": "ssh yvz@192.168.1.8",
-    "attach": "ssh -tt yvz@192.168.1.8 'tmux -S /tmp/claude-sms-tmux attach -t claude-sms'"
+    "attach": "ssh -tt yvz@192.168.1.8 'tmux -S /tmp/claude-sms-tmux attach -t claude-sms'",
+    "diagnose": "ssh yvz@192.168.1.8 '~/sms-to-claude/scripts/diagnose.sh' || echo '[FAIL] Could not connect to VM — VM may be down or unreachable'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",
