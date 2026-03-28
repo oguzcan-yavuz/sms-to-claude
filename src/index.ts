@@ -10,6 +10,7 @@ import { WebhookReceiver } from './webhook-receiver.js'
 import { PermissionManager } from './permissions.js'
 
 const MAX_SMS_CHARS = 1600
+const HEARTBEAT_INTERVAL_MS = 60_000
 const TRUNCATED_SUFFIX = ' [truncated]'
 const LOG_FILE = '/tmp/sms-to-claude.log'
 
@@ -18,6 +19,10 @@ function log(...args: unknown[]) {
   process.stderr.write(line)
   appendFileSync(LOG_FILE, line)
 }
+
+let taskStartedAt: number | null = null
+let lastSmsAt: number | null = null
+let silenceWarningSent = false
 
 const config = loadConfig()
 const gatewayClient = new GatewayClient(config.gateway)
@@ -35,7 +40,9 @@ const mcp = new McpServer(
     },
     instructions:
       'Commands arrive via SMS from the owner as <channel source="sms" ...> tags. ' +
-      'Always reply with the sms_reply tool when your work is done or when you need to ask something. ' +
+      'Use sms_update to send progress updates while working (e.g. "Running tests...", "Reading 12 files..."). ' +
+      'Send an sms_update at least every 60 seconds during long-running tasks so the owner knows what you are doing. ' +
+      'Use sms_reply only when your work is fully complete or when you need to ask the owner something. ' +
       'Be concise — this is SMS. If sms_reply fails, log the error to the terminal.',
   },
 )
@@ -48,6 +55,7 @@ async function sendSms(text: string): Promise<void> {
   const body = text.length > MAX_SMS_CHARS
     ? text.slice(0, MAX_SMS_CHARS - TRUNCATED_SUFFIX.length) + TRUNCATED_SUFFIX
     : text
+  lastSmsAt = Date.now()
   await gatewayClient.send(owner, body)
 }
 
@@ -65,6 +73,28 @@ mcp.registerTool(
   {
     description: 'Send a message back to the owner via SMS',
     inputSchema: { text: z.string().describe('The message to send') },
+  },
+  async ({ text }) => {
+    try {
+      taskStartedAt = null
+      await sendSms(text)
+      return { content: [{ type: 'text', text: 'sent' }] }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return {
+        content: [{ type: 'text', text: `Failed to send SMS: ${msg}` }],
+        isError: true,
+      }
+    }
+  },
+)
+
+// --- sms_update tool ---
+mcp.registerTool(
+  'sms_update',
+  {
+    description: 'Send a progress update to the owner mid-task without signalling completion. Use this to report what you are currently doing.',
+    inputSchema: { text: z.string().describe('Short status update, e.g. "Running migrations..."') },
   },
   async ({ text }) => {
     try {
@@ -101,6 +131,9 @@ const receiver = new WebhookReceiver({
   allowedPhoneNumbers: config.allowedPhoneNumbers,
   signingKey: config.webhookSigningKey,
   onMessage: async msg => {
+    taskStartedAt = Date.now()
+    lastSmsAt = null
+    silenceWarningSent = false
     log('[sms-channel] forwarding to claude:', msg.body)
     await sendNotification('notifications/claude/channel', {
       content: msg.body,
@@ -126,6 +159,14 @@ try {
   await mcp.connect(new StdioServerTransport())
   receiver.start(config.webhookPort)
   permMgr.startSweep()
+  setInterval(async () => {
+    if (taskStartedAt === null || silenceWarningSent) return
+    const silentSince = lastSmsAt ?? taskStartedAt
+    if (Date.now() - silentSince < HEARTBEAT_INTERVAL_MS) return
+    silenceWarningSent = true
+    const secs = Math.round((Date.now() - taskStartedAt) / 1000)
+    await sendSms(`[no update from Claude in 1m — still running, ${Math.floor(secs / 60)}m${secs % 60}s elapsed]`)
+  }, HEARTBEAT_INTERVAL_MS)
   log('[sms-channel] started, webhook listening on port', config.webhookPort)
 } catch (err) {
   log('[sms-channel] startup failed:', err)
