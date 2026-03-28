@@ -111,6 +111,13 @@ const receiver = new WebhookReceiver({
   onVerdict: async (behavior, requestId) => {
     await permMgr.handleVerdict(behavior, requestId)
   },
+  onUnrecognizedVerdict: async (raw) => {
+    const ids = permMgr.pendingIds()
+    const hint = ids.length > 0
+      ? `Pending: ${ids.map(id => `yes ${id} / no ${id}`).join(', ')}`
+      : 'No pending permission requests.'
+    await sendSms(`Could not parse verdict: "${raw}"\nExpected: yes [id] or no [id]\n${hint}`)
+  },
 })
 
 // --- Connect and start ---

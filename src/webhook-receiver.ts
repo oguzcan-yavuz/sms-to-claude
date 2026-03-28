@@ -9,6 +9,7 @@ export interface ReceiverContext {
   signingKey?: string
   onMessage: (msg: GatewayMessage) => Promise<void>
   onVerdict?: (behavior: 'allow' | 'deny', requestId: string) => Promise<void>
+  onUnrecognizedVerdict?: (raw: string) => Promise<void>
 }
 
 function verifySignature(signingKey: string, body: string, timestamp: string, signature: string): boolean {
@@ -103,11 +104,19 @@ export class WebhookReceiver {
       dateSent: new Date(receivedAt),
     }
 
-    const verdictMatch = message.trim().match(VERDICT_REGEX)
+    const normalized = message.trim().replace(/[.,!?;:]+$/, '')
+    const verdictMatch = normalized.match(VERDICT_REGEX)
     if (verdictMatch) {
       const behavior = verdictMatch[1].toLowerCase() === 'yes' ? 'allow' : 'deny'
       const requestId = verdictMatch[2].toLowerCase()
       await this.ctx.onVerdict?.(behavior, requestId)
+      return new Response('OK')
+    }
+
+    // Near-miss: looks like an attempted verdict but didn't parse cleanly
+    const NEAR_MISS_REGEX = /^(yes|no)\s+\S+/i
+    if (NEAR_MISS_REGEX.test(normalized)) {
+      await this.ctx.onUnrecognizedVerdict?.(message.trim())
       return new Response('OK')
     }
 

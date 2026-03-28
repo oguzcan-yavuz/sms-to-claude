@@ -49,6 +49,10 @@ export class PermissionManager {
     return this.pending.size > 0
   }
 
+  pendingIds(): string[] {
+    return [...this.pending.keys()]
+  }
+
   async sweepExpired(): Promise<void> {
     const now = Date.now()
     const expired = [...this.pending.entries()].filter(([, entry]) => entry.expires <= now)
