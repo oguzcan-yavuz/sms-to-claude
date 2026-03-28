@@ -10,7 +10,6 @@ import { WebhookReceiver } from './webhook-receiver.js'
 import { PermissionManager } from './permissions.js'
 
 const MAX_SMS_CHARS = 1600
-const HEARTBEAT_INTERVAL_MS = 60_000
 const TRUNCATED_SUFFIX = ' [truncated]'
 const LOG_FILE = '/tmp/sms-to-claude.log'
 
@@ -21,8 +20,6 @@ function log(...args: unknown[]) {
 }
 
 let taskStartedAt: number | null = null
-let lastSmsAt: number | null = null
-let silenceWarningSent = false
 
 const config = loadConfig()
 const gatewayClient = new GatewayClient(config.gateway)
@@ -44,6 +41,7 @@ const mcp = new McpServer(
       'The owner has no other way to know what you are doing — silence is indistinguishable from being stuck. ' +
       'Group recent actions into a single brief update (e.g. "Read 5 files, running tests now..."). ' +
       'Use sms_reply only when your work is fully complete or when you need to ask the owner something. ' +
+      'NEVER ask questions or wait for input in the terminal — the owner is not present. Always use sms_reply to ask questions. ' +
       'Be concise — this is SMS. If sms_reply fails, log the error to the terminal.',
   },
 )
@@ -56,7 +54,6 @@ async function sendSms(text: string): Promise<void> {
   const body = text.length > MAX_SMS_CHARS
     ? text.slice(0, MAX_SMS_CHARS - TRUNCATED_SUFFIX.length) + TRUNCATED_SUFFIX
     : text
-  lastSmsAt = Date.now()
   await gatewayClient.send(owner, body)
 }
 
@@ -133,8 +130,6 @@ const receiver = new WebhookReceiver({
   signingKey: config.webhookSigningKey,
   onMessage: async msg => {
     taskStartedAt = Date.now()
-    lastSmsAt = null
-    silenceWarningSent = false
     log('[sms-channel] forwarding to claude:', msg.body)
     await sendNotification('notifications/claude/channel', {
       content: msg.body,
@@ -160,14 +155,6 @@ try {
   await mcp.connect(new StdioServerTransport())
   receiver.start(config.webhookPort)
   permMgr.startSweep()
-  setInterval(async () => {
-    if (taskStartedAt === null || silenceWarningSent) return
-    const silentSince = lastSmsAt ?? taskStartedAt
-    if (Date.now() - silentSince < HEARTBEAT_INTERVAL_MS) return
-    silenceWarningSent = true
-    const secs = Math.round((Date.now() - taskStartedAt) / 1000)
-    await sendSms(`[no update from Claude in 1m — still running, ${Math.floor(secs / 60)}m${secs % 60}s elapsed]`)
-  }, HEARTBEAT_INTERVAL_MS)
   log('[sms-channel] started, webhook listening on port', config.webhookPort)
 } catch (err) {
   log('[sms-channel] startup failed:', err)
