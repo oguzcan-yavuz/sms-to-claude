@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude SMS Diagnosis</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.5; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f7; color: #333; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-ok { background: #28a745; }
+        .status-fail { background: #dc3545; }
+        .status-warn { background: #ffc107; }
+        .status-unknown { background: #6c757d; }
+        .actions { display: flex; gap: 10px; margin-top: 10px; }
+        button { padding: 8px 16px; border-radius: 4px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 14px; }
+        button:hover { background: #f0f0f0; }
+        button:active { background: #e0e0e0; }
+        pre { background: #222; color: #eee; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 13px; max-height: 300px; }
+        .usage-link { display: inline-block; background: #007AFF; color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; margin-top: 10px; }
+        .loading { opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SMS-to-Claude Status</h1>
+        <button onclick="refreshStatus()">Refresh Now</button>
+    </div>
+
+    <div id="status-container">
+        <!-- Status cards will be injected here -->
+    </div>
+
+    <div class="card">
+        <h3>Claude Usage</h3>
+        <p>If Claude isn't responding, check if we've hit the daily message limit on your account.</p>
+        <a href="https://claude.ai/settings/usage" target="_blank" class="usage-link">Check Claude.ai Usage</a>
+    </div>
+
+    <div id="log-card" class="card" style="display: none;">
+        <h3 id="log-title">Action Log</h3>
+        <pre id="log-content"></pre>
+    </div>
+
+    <script>
+        async function refreshStatus() {
+            const container = document.getElementById('status-container');
+            container.classList.add('loading');
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                renderStatus(data);
+            } catch (err) {
+                console.error('Failed to fetch status:', err);
+            } finally {
+                container.classList.remove('loading');
+            }
+        }
+
+        function renderStatus(data) {
+            const container = document.getElementById('status-container');
+            container.innerHTML = data.components.map(c => `
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between;">
+                        <strong>${c.name}</strong>
+                        <span><span class="status-dot ${getStatusClass(c.status)}"></span>${c.label}</span>
+                    </div>
+                    <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${c.description}</p>
+                    <div class="actions">
+                        ${c.actions.map(a => `<button onclick="runAction('${a.id}', '${a.name}')">${a.name}</button>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusClass(status) {
+            if (status === 'OK') return 'status-ok';
+            if (status === 'FAIL') return 'status-fail';
+            if (status === 'WARN') return 'status-warn';
+            return 'status-unknown';
+        }
+
+        async function runAction(id, name) {
+            const logCard = document.getElementById('log-card');
+            const logTitle = document.getElementById('log-title');
+            const logContent = document.getElementById('log-content');
+            
+            logCard.style.display = 'block';
+            logTitle.innerText = 'Running: ' + name;
+            logContent.innerText = 'Starting...';
+            
+            try {
+                const res = await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: id })
+                });
+                const data = await res.json();
+                logContent.innerText = data.output || 'No output';
+                refreshStatus();
+            } catch (err) {
+                logContent.innerText = 'Error: ' + err.message;
+            }
+        }
+
+        // Initial load
+        refreshStatus();
+        // Poll every 30s
+        setInterval(refreshStatus, 30000);
+    </script>
+</body>
+</html>
