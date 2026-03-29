@@ -5,9 +5,12 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "test": "bun test",
-    "ssh": "ssh -o ConnectTimeout=5 yvz@192.168.1.8",
-    "attach": "ssh -o ConnectTimeout=5 -tt yvz@192.168.1.8 'tmux -S /tmp/claude-sms-tmux attach -t claude-sms'",
-    "diagnose": "ssh -o ConnectTimeout=5 yvz@192.168.1.8 '~/sms-to-claude/scripts/diagnose.sh' || echo '[FAIL] Could not connect to VM — VM may be down or unreachable'",
+    "ssh": "ssh -o ConnectTimeout=5 -p 2222 yvz@localhost",
+    "attach": "ssh -o ConnectTimeout=5 -p 2222 -tt yvz@localhost 'tmux -S /tmp/claude-sms-tmux attach -t claude-sms'",
+    "diagnose": "ssh -o ConnectTimeout=5 -p 2222 yvz@localhost '~/sms-to-claude/scripts/diagnose.sh' || echo '[FAIL] Could not connect to VM — VM may be down or unreachable'",
+    "diagnosis:start": "pm2 start src/diagnosis-server.ts --name claude-diagnosis-dashboard --interpreter bun",
+    "diagnosis:stop": "pm2 stop claude-diagnosis-dashboard",
+    "diagnosis:logs": "pm2 logs claude-diagnosis-dashboard",
     "diagnosis-server": "bun run src/diagnosis-server.ts"
   },
   "dependencies": {
