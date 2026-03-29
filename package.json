@@ -5,9 +5,9 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "test": "bun test",
-    "ssh": "ssh yvz@192.168.1.8",
-    "attach": "ssh -tt yvz@192.168.1.8 'tmux -S /tmp/claude-sms-tmux attach -t claude-sms'",
-    "diagnose": "ssh yvz@192.168.1.8 '~/sms-to-claude/scripts/diagnose.sh' || echo '[FAIL] Could not connect to VM — VM may be down or unreachable'",
+    "ssh": "ssh -o ConnectTimeout=5 yvz@192.168.1.8",
+    "attach": "ssh -o ConnectTimeout=5 -tt yvz@192.168.1.8 'tmux -S /tmp/claude-sms-tmux attach -t claude-sms'",
+    "diagnose": "ssh -o ConnectTimeout=5 yvz@192.168.1.8 '~/sms-to-claude/scripts/diagnose.sh' || echo '[FAIL] Could not connect to VM — VM may be down or unreachable'",
     "diagnosis-server": "bun run src/diagnosis-server.ts"
   },
   "dependencies": {
