@@ -67,6 +67,7 @@
                         <span><span class="status-dot ${getStatusClass(c.status)}"></span>${c.label}</span>
                     </div>
                     <p style="font-size: 0.9em; color: #666; margin: 5px 0;">${c.description}</p>
+                    ${c.id === 'gateway' ? '<p style="font-size: 0.8em; color: #888; margin: 0 0 5px 0;">Tip: Try unlocking the phone screen if unreachable.</p>' : ''}
                     <div class="actions">
                         ${c.actions.map(a => `<button onclick="runAction('${a.id}', '${a.name}')">${a.name}</button>`).join('')}
                     </div>
