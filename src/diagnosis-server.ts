@@ -4,7 +4,7 @@ import { readFileSync } from 'fs'
 
 const PORT = 8082
 const UI_PATH = join(import.meta.dirname, 'diagnosis-ui.html')
-const VM_SSH = "ssh -o ConnectTimeout=5 yvz@192.168.1.8"
+const VM_SSH = "ssh -o ConnectTimeout=5 -p 2222 yvz@localhost"
 
 async function runCommand(cmd: string): Promise<string> {
   return new Promise((resolve) => {

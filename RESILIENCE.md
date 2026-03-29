@@ -111,18 +111,12 @@ Install MacroDroid (or similar) on the Android device and create a trigger:
 
 This clears stale network state that can cause SMSGate's HTTP server to stop accepting connections without crashing.
 
-### 7. Claude Code headless auth
+### 8. UTM Stable Networking (Emulated VLAN)
 
-Verify that Claude Code starts without requiring a browser-based login. On the VM:
-
-```bash
-# Test that claude starts without interactive auth
-claude --dangerously-load-development-channels server:sms --allowedTools "Read" &
-sleep 5
-kill %1
-```
-
-If it prompts for browser auth, run `claude` interactively once to complete auth, then confirm the session token is persisted in `~/.claude/` so automated restarts work unattended.
+Bridged networking on Apple Silicon can be unstable. Use **Emulated VLAN** (NAT) mode with **Port Forwarding**:
+- **Host Port 2222** -> **Guest Port 22**
+- Access VM via: `ssh -p 2222 yvz@localhost`
+- All project scripts are pre-configured to use this port.
 
 ---
 
