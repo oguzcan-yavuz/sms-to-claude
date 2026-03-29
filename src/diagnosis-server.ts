@@ -18,6 +18,7 @@ async function runCommand(cmd: string): Promise<string> {
 
 const server = Bun.serve({
   port: PORT,
+  hostname: '127.0.0.1',
   async fetch(req) {
     const url = new URL(req.url)
 
@@ -57,6 +58,14 @@ const server = Bun.serve({
           status: diagOutput.includes('6. ngrok tunnel ... [OK]') ? 'OK' : 'FAIL',
           label: diagOutput.includes('6. ngrok tunnel ... [OK]') ? 'Active' : 'Down',
           actions: [{ id: 'test-webhook', name: 'Test Webhook' }]
+        },
+        {
+          id: 'network',
+          name: 'VM Network',
+          description: 'Internal network bridge for the VM.',
+          status: diagOutput.includes('5. Android gateway ... [OK]') ? 'OK' : 'FAIL',
+          label: diagOutput.includes('5. Android gateway ... [OK]') ? 'Connected' : 'Disconnected',
+          actions: [{ id: 'reset-network', name: 'Reset Network' }]
         }
       ]
 
@@ -79,7 +88,7 @@ const server = Bun.serve({
           cmd = `bash scripts/test-webhook.sh`
           break
         case 'reset-network':
-          cmd = `ssh yvz@192.168.1.8 'sudo ~/sms-to-claude/scripts/vm-network-watchdog.sh'`
+          cmd = `${VM_SSH} 'sudo ~/sms-to-claude/scripts/vm-network-watchdog.sh'`
           break
         default:
           return new Response('Unknown action', { status: 400 })
