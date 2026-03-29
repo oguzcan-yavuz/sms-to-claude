@@ -4,7 +4,7 @@ import { readFileSync } from 'fs'
 
 const PORT = 8082
 const UI_PATH = join(import.meta.dirname, 'diagnosis-ui.html')
-const VM_SSH = "ssh yvz@192.168.1.8"
+const VM_SSH = "ssh -o ConnectTimeout=5 yvz@192.168.1.8"
 
 async function runCommand(cmd: string): Promise<string> {
   return new Promise((resolve) => {
@@ -19,6 +19,7 @@ async function runCommand(cmd: string): Promise<string> {
 const server = Bun.serve({
   port: PORT,
   hostname: '127.0.0.1',
+  idleTimeout: 30,
   async fetch(req) {
     const url = new URL(req.url)
 
