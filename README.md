@@ -25,18 +25,6 @@ flowchart LR
 - **Progress updates** — Claude uses `sms_update` to send brief status messages mid-task (e.g. "Reading 12 files, running tests now...")
 - **Get a reply** — Claude uses `sms_reply` when work is complete or it needs to ask you something
 - **Fallback reply** — a Stop hook fires at the end of every Claude turn; if `sms_reply` wasn't called (e.g. Claude answered in the terminal), the hook forwards the response via SMS automatically
-- **Permission relay** — when Claude needs to run a tool requiring approval, you get an SMS like:
-
-  ```
-  [Permission needed]
-  Tool: Bash
-  rm -rf dist/
-
-  Reply: yes x7k OR no x7k
-  ```
-
-  Reply `yes x7k` or `no x7k` to approve or deny. The short code is a unique ID for that request — it keeps your reply matched to the right prompt if multiple are queued.
-
 ## Requirements
 
 - [Bun](https://bun.sh) installed
@@ -111,9 +99,6 @@ Once running, SMS your number from your allowlisted phone. Claude receives the m
 
 **Tips:**
 - Responses longer than 1600 characters are truncated with `[truncated]` — ask Claude to summarize if needed
-- Send `yes <id>` or `no <id>` to respond to permission prompts — capitalisation and trailing punctuation are handled (e.g. `Yes abc.` works)
-- If your verdict doesn't parse, you'll get an SMS back showing the exact IDs to reply to
-- If you send a new command while a permission prompt is pending, Claude will start on the new command concurrently — sequence your messages deliberately
 
 ## Security
 
